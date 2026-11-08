@@ -1,0 +1,19 @@
+# --- Reconhecimento facial ---
+deepface>=0.0.79
+tf-keras>=2.15.0          # necessario para o DeepFace rodar com TensorFlow novo
+tensorflow>=2.12.0
+opencv-python>=4.5.5.64
+
+# --- Processamento e utilitarios ---
+numpy>=1.22.0
+Pillow>=9.0.0
+requests>=2.27.1
+
+# --- Painel web ---
+Flask>=2.0.0
+
+# --- Comunicacao IoT ---
+paho-mqtt>=2.0.0                 # assina a presenca do PIR (MQTT)
+tuya-connector-python>=0.1.2     # controla a fechadura via Tuya Cloud
+# --- Configuracao ---
+python-dotenv>=1.0.0             # carrega o arquivo .env

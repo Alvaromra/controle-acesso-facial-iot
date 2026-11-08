@@ -1,0 +1,27 @@
+# Segredos
+.env
+secrets.h
+
+# Dados biometricos e de acesso (nunca publicar)
+fotos_autorizadas/
+encodings.pkl
+logs_acesso.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# PlatformIO / IDEs
+.pio/
+.vscode/
+
+# Midia pesada
+*.mp4
+*.mkv
+*.mov
+
+# macOS
+.DS_Store
+__MACOSX/

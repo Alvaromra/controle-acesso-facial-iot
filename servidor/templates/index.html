@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Acesso Facial - UnB</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0e1116;
+    --card: #1a1f29;
+    --card2: #232a38;
+    --accent: #4ade80;
+    --accent2: #38bdf8;
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --text: #e5e9f0;
+    --muted: #8b95a7;
+    --border: #2a3140;
+  }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, #1a1f29, #232a38);
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header h1 span { color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab {
+    padding: 10px 18px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--muted);
+    transition: all .2s;
+  }
+  .tab:hover { background: var(--card2); color: var(--text); }
+  .tab.active { background: var(--accent); color: #0e1116; font-weight: 600; border-color: var(--accent); }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .3s; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .grid { display: grid; gap: 16px; }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card h3 { font-size: 14px; color: var(--muted); font-weight: 500; margin-bottom: 12px; }
+  .stat { font-size: 32px; font-weight: 700; }
+  .stat.green { color: var(--accent); }
+  .stat.blue { color: var(--accent2); }
+  .stat.red { color: var(--danger); }
+
+  .status-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .status-row:last-child { border-bottom: none; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .dot.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .dot.off { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+  .status-row .label { flex: 1; }
+  .status-row .detail { color: var(--muted); font-size: 13px; }
+
+  button {
+    padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600; transition: all .2s;
+  }
+  .btn-green { background: var(--accent); color: #0e1116; }
+  .btn-blue { background: var(--accent2); color: #0e1116; }
+  .btn-red { background: var(--danger); color: #fff; }
+  .btn-gray { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+  .btn-orange { background: var(--warn); color: #0e1116; }
+  button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  input, select {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card2); color: var(--text); font-size: 14px; width: 100%;
+  }
+  label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+  .form-group { margin-bottom: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+  tr:hover td { background: var(--card2); }
+
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .badge.autorizado { background: rgba(74,222,128,.15); color: var(--accent); }
+  .badge.negado { background: rgba(248,113,113,.15); color: var(--danger); }
+  .badge.manual { background: rgba(56,189,248,.15); color: var(--accent2); }
+  .badge.sistema { background: rgba(139,149,167,.15); color: var(--muted); }
+  .badge.erro { background: rgba(251,191,36,.15); color: var(--warn); }
+
+  .pessoa-card {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; display: flex; align-items: center; gap: 14px;
+  }
+  .pessoa-card .avatar {
+    width: 48px; height: 48px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+    color: #0e1116; font-size: 18px; flex-shrink: 0;
+  }
+  .pessoa-card .info { flex: 1; }
+  .pessoa-card .info .nome { font-weight: 600; }
+  .pessoa-card .info .fotos { color: var(--muted); font-size: 13px; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; padding: 14px 20px;
+    background: var(--card); border: 1px solid var(--accent); border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.4); transform: translateY(100px); opacity: 0;
+    transition: all .3s; z-index: 1000; max-width: 350px;
+  }
+  .toast.show { transform: none; opacity: 1; }
+  .toast.error { border-color: var(--danger); }
+
+  .stream-box {
+    background: #000; border-radius: 12px; overflow: hidden; border: 2px solid var(--border);
+    min-height: 360px; display: flex; align-items: center; justify-content: center;
+  }
+  .stream-box img { width: 100%; display: block; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .log-detalhes { max-height: 300px; overflow-y: auto; background: #0a0d12; padding: 14px;
+    border-radius: 8px; font-family: monospace; font-size: 12px; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🔐 Controle de Acesso <span>Facial</span></h1>
+    <div class="sub">ENE0477 - Automação Predial com IoT · UnB · Álvaro Marçal</div>
+  </div>
+  <div class="row-actions">
+    <button class="btn-blue" onclick="abrirManual()">🔓 Abrir</button>
+    <button class="btn-orange" onclick="fecharManual()">🔒 Fechar</button>
+    <button id="btnRecon" class="btn-green" onclick="toggleReconhecimento()">▶ Iniciar Reconhecimento</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="mostrarPainel('dashboard', this)">📊 Dashboard</div>
+    <div class="tab" onclick="mostrarPainel('pessoas', this)">👥 Pessoas</div>
+    <div class="tab" onclick="mostrarPainel('monitor', this)">📡 Monitoramento</div>
+    <div class="tab" onclick="mostrarPainel('camera', this)">📷 Câmera</div>
+    <div class="tab" onclick="mostrarPainel('logs', this)">📋 Logs</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="panel active">
+    <div class="grid grid-4" style="margin-bottom:16px">
+      <div class="card">
+        <h3>Pessoas Cadastradas</h3>
+        <div class="stat green" id="s-pessoas">-</div>
+      </div>
+      <div class="card">
+        <h3>Rostos Treinados</h3>
+        <div class="stat blue" id="s-rostos">-</div>
+      </div>
+      <div class="card">
+        <h3>Acessos Hoje</h3>
+        <div class="stat green" id="s-acessos">-</div>
+      </div>
+      <div class="card">
+        <h3>Negados Hoje</h3>
+        <div class="stat red" id="s-negados">-</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Status do Sistema</h3>
+        <div class="status-row">
+          <div class="dot off" id="d-camera"></div>
+          <div class="label">ESP32-CAM</div>
+          <div class="detail" id="det-camera">verificando...</div>
+        </div>
+        <div class="status-row">
+          <div class="dot off" id="d-fechadura"></div>
+          <div class="label">Fechadura IFR 7001</div>
+          <div class="detail" id="det-fechadura">verificando...</div>
+        </div>
+        <div class="status-row">
+          <div class="dot off" id="d-tuya"></div>
+          <div class="label">Tuya Cloud</div>
+          <div class="detail" id="det-tuya">verificando...</div>
+        </div>
+        <div class="status-row">
+          <div class="dot off" id="d-recon"></div>
+          <div class="label">Reconhecimento Facial</div>
+          <div class="detail" id="det-recon">parado</div>
+        </div>
+        <div class="status-row">
+          <div class="dot off" id="d-pir"></div>
+          <div class="label">Sensor de Presença (PIR)</div>
+          <div class="detail" id="det-pir">verificando...</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Último Acesso</h3>
+        <div id="ultimo-acesso">
+          <div class="muted">Nenhum acesso registrado ainda.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESSOAS -->
+  <div id="pessoas" class="panel">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>➕ Adicionar / Atualizar Pessoa</h3>
+        <div class="form-group">
+          <label>Nome da pessoa</label>
+          <input type="text" id="upload-nome" placeholder="Ex: Alvaro">
+        </div>
+        <div class="form-group">
+          <label>Fotos (pode selecionar várias)</label>
+          <input type="file" id="upload-fotos" accept="image/*" multiple>
+        </div>
+        <div class="row-actions">
+          <button class="btn-green" onclick="enviarFotos()">📤 Enviar Fotos</button>
+          <button class="btn-blue" onclick="treinar()" id="btnTreinar">🧠 Treinar Modelo</button>
+        </div>
+        <div id="resultado-treino" class="log-detalhes" style="display:none"></div>
+      </div>
+      <div class="card">
+        <h3>Pessoas Cadastradas</h3>
+        <div id="lista-pessoas" class="grid" style="gap:10px">
+          <div class="muted">Carregando...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONITORAMENTO -->
+  <div id="monitor" class="panel">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>ESP32-CAM</h3>
+        <div class="status-row">
+          <div class="dot off" id="m-camera"></div>
+          <div class="label">Status</div>
+          <div class="detail" id="m-camera-det">-</div>
+        </div>
+        <div class="status-row">
+          <div class="label">IP</div>
+          <div class="detail" id="m-camera-ip">-</div>
+        </div>
+        <p class="muted" style="margin-top:10px">Captura: /capture · Stream: /stream</p>
+      </div>
+      <div class="card">
+        <h3>Fechadura IFR 7001 (Tuya)</h3>
+        <div class="status-row">
+          <div class="dot off" id="m-lock"></div>
+          <div class="label">Status</div>
+          <div class="detail" id="m-lock-det">-</div>
+        </div>
+        <div class="status-row">
+          <div class="label">Bateria</div>
+          <div class="detail" id="m-lock-bat">-</div>
+        </div>
+        <div class="status-row">
+          <div class="label">Device ID</div>
+          <div class="detail" style="font-family:monospace;font-size:11px">eb9e87448a54712fe7ifiy</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Broker MQTT (Mosquitto)</h3>
+        <div class="status-row">
+          <div class="dot off" id="m-mqtt"></div>
+          <div class="label">Status</div>
+          <div class="detail" id="m-mqtt-det">-</div>
+        </div>
+        <div class="status-row">
+          <div class="label">Broker</div>
+          <div class="detail" id="m-mqtt-broker">-</div>
+        </div>
+        <p class="muted" style="margin-top:10px">Broker usado pelo sensor de presença (ESP32 DevKit / PIR).</p>
+      </div>
+      <div class="card">
+        <h3>Sensor de Presença - PIR (ESP32 DevKit)</h3>
+        <div class="status-row">
+          <div class="dot off" id="m-pir"></div>
+          <div class="label">Conexão MQTT</div>
+          <div class="detail" id="m-pir-det">-</div>
+        </div>
+        <div class="status-row">
+          <div class="dot off" id="m-pir-presenca"></div>
+          <div class="label">Presença agora</div>
+          <div class="detail" id="m-pir-presenca-det">-</div>
+        </div>
+        <div class="status-row">
+          <div class="label">Tópico</div>
+          <div class="detail" style="font-family:monospace;font-size:11px">unb/alvaro/controleacesso/presenca</div>
+        </div>
+        <p class="muted" style="margin-top:10px">O PIR dispara a captura: o reconhecimento só roda quando há presença detectada.</p>
+      </div>
+      <div class="card">
+        <h3>Arquitetura do Sistema</h3>
+        <div style="font-family:monospace; font-size:12px; line-height:2; color:var(--muted)">
+          ESP32-CAM <span style="color:var(--accent2)">→</span> captura<br>
+          <span style="margin-left:20px">↓</span><br>
+          DeepFace <span style="color:var(--accent2)">→</span> reconhece rosto<br>
+          <span style="margin-left:20px">↓</span><br>
+          Tuya Cloud <span style="color:var(--accent2)">→</span> ticket + abrir<br>
+          <span style="margin-left:20px">↓</span><br>
+          Fechadura <span style="color:var(--accent)">→</span> DESTRANCA 🔓
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMERA -->
+  <div id="camera" class="panel">
+    <div class="card">
+      <h3>Visualização da câmera</h3>
+      <div class="stream-box" id="stream-box">
+        <div class="muted">Clique em "Visualizar" para ver a câmera</div>
+      </div>
+      <div class="row-actions" style="margin-top:14px">
+        <button class="btn-green" onclick="carregarStream()">▶ Visualizar</button>
+        <button class="btn-gray" onclick="pararStream()">⏸ Parar</button>
+      </div>
+      <p class="muted" style="margin-top:10px">✅ A imagem vem do painel (não da câmera direto), então não atrapalha o reconhecimento. Durante o reconhecimento, você vê exatamente os frames analisados, com o resultado (autorizado/negado) sobreposto.</p>
+    </div>
+  </div>
+
+  <!-- LOGS -->
+  <div id="logs" class="panel">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+        <h3 style="margin:0">Histórico de Acessos</h3>
+        <button class="btn-red" onclick="limparLogs()">🗑 Limpar Logs</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Data/Hora</th><th>Tipo</th><th>Pessoa</th><th>Detalhe</th></tr>
+        </thead>
+        <tbody id="tabela-logs">
+          <tr><td colspan="4" class="muted">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+let reconhecimentoAtivo = false;
+let streamAtivo = false;
+
+function mostrarPainel(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+  if (id === 'logs') carregarLogs();
+}
+
+function toast(msg, erro = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (erro ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+async function atualizarStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+
+    document.getElementById('s-pessoas').textContent = d.total_pessoas;
+    document.getElementById('s-rostos').textContent = d.total_rostos;
+    document.getElementById('s-acessos').textContent = d.acessos_hoje;
+    document.getElementById('s-negados').textContent = d.negados_hoje;
+
+    setDot('d-camera', d.camera.online, 'det-camera', d.camera.online ? d.camera.ip : 'offline');
+    setDot('d-fechadura', d.fechadura.online, 'det-fechadura',
+      d.fechadura.online ? `online · ${d.fechadura.bateria ?? '?'}%` : 'offline');
+    setDot('d-tuya', d.tuya_conectado, 'det-tuya', d.tuya_conectado ? 'conectado' : 'desconectado');
+    setDot('d-recon', d.reconhecimento_ativo, 'det-recon', d.reconhecimento_ativo ? 'ativo' : 'parado');
+
+    // PIR
+    const pirOn = d.pir && d.pir.conectado;
+    const presenca = d.pir && d.pir.presenca;
+    setDot('d-pir', pirOn, 'det-pir', pirOn ? (presenca ? 'presença detectada' : 'aguardando') : 'offline');
+    setDot('m-pir', pirOn, 'm-pir-det', pirOn ? 'Conectado' : 'Offline');
+    setDot('m-pir-presenca', presenca, 'm-pir-presenca-det', presenca ? 'Sim' : 'Não');
+
+    reconhecimentoAtivo = d.reconhecimento_ativo;
+    const btn = document.getElementById('btnRecon');
+    btn.textContent = reconhecimentoAtivo ? '⏹ Parar Reconhecimento' : '▶ Iniciar Reconhecimento';
+    btn.className = reconhecimentoAtivo ? 'btn-red' : 'btn-green';
+
+    setDot('m-camera', d.camera.online, 'm-camera-det', d.camera.online ? 'Online' : 'Offline');
+    document.getElementById('m-camera-ip').textContent = d.camera.ip;
+    setDot('m-lock', d.fechadura.online, 'm-lock-det', d.fechadura.online ? 'Online' : 'Offline');
+    document.getElementById('m-lock-bat').textContent = (d.fechadura.bateria ?? '?') + '%';
+    setDot('m-mqtt', d.mosquitto.online, 'm-mqtt-det', d.mosquitto.online ? 'Online' : 'Offline');
+    document.getElementById('m-mqtt-broker').textContent = d.mosquitto.broker;
+
+    const ua = document.getElementById('ultimo-acesso');
+    if (d.ultimo_acesso) {
+      ua.innerHTML = `<div style="font-size:24px;font-weight:700;color:var(--accent)">${d.ultimo_acesso.pessoa}</div>
+        <div class="muted">às ${d.ultimo_acesso.hora}</div>`;
+    }
+
+    renderPessoas(d.pessoas);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function setDot(dotId, on, detId, det) {
+  document.getElementById(dotId).className = 'dot ' + (on ? 'on' : 'off');
+  if (detId) document.getElementById(detId).textContent = det;
+}
+
+function renderPessoas(pessoas) {
+  const c = document.getElementById('lista-pessoas');
+  if (!pessoas.length) { c.innerHTML = '<div class="muted">Nenhuma pessoa cadastrada.</div>'; return; }
+  c.innerHTML = pessoas.map(p => `
+    <div class="pessoa-card">
+      <div class="avatar">${p.nome[0].toUpperCase()}</div>
+      <div class="info">
+        <div class="nome">${p.nome}</div>
+        <div class="fotos">${p.num_fotos} foto(s)</div>
+      </div>
+      <button class="btn-red" style="padding:6px 12px" onclick="removerPessoa('${p.nome}')">🗑</button>
+    </div>`).join('');
+}
+
+async function enviarFotos() {
+  const nome = document.getElementById('upload-nome').value.trim();
+  const fotos = document.getElementById('upload-fotos').files;
+  if (!nome) { toast('Digite o nome', true); return; }
+  if (!fotos.length) { toast('Selecione pelo menos uma foto', true); return; }
+
+  const fd = new FormData();
+  fd.append('nome', nome);
+  for (const f of fotos) fd.append('fotos', f);
+
+  const r = await fetch('/api/upload', { method: 'POST', body: fd });
+  const d = await r.json();
+  toast(d.msg, !d.ok);
+  if (d.ok) {
+    document.getElementById('upload-nome').value = '';
+    document.getElementById('upload-fotos').value = '';
+    atualizarStatus();
+  }
+}
+
+async function removerPessoa(nome) {
+  if (!confirm(`Remover ${nome} e todas as fotos?`)) return;
+  const r = await fetch('/api/remover_pessoa', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({nome})
+  });
+  const d = await r.json();
+  toast(d.msg, !d.ok);
+  atualizarStatus();
+}
+
+async function treinar() {
+  const btn = document.getElementById('btnTreinar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Treinando...';
+  const box = document.getElementById('resultado-treino');
+  box.style.display = 'block';
+  box.textContent = 'Processando fotos... isso pode levar alguns segundos.';
+
+  try {
+    const r = await fetch('/api/treinar', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      toast(`Treinamento concluído: ${d.total} rostos`);
+      box.textContent = `✓ ${d.total} rostos extraídos\nPessoas: ${d.pessoas.join(', ')}\n\n` + d.detalhes.join('\n');
+      atualizarStatus();
+    } else {
+      toast('Erro no treinamento', true);
+      box.textContent = 'ERRO: ' + d.msg;
+    }
+  } catch (e) {
+    toast('Erro: ' + e, true);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '🧠 Treinar Modelo';
+}
+
+async function abrirManual() {
+  const r = await fetch('/api/abrir', { method: 'POST' });
+  const d = await r.json();
+  toast(d.msg, !d.ok);
+}
+
+async function fecharManual() {
+  const r = await fetch('/api/fechar', { method: 'POST' });
+  const d = await r.json();
+  toast(d.msg, !d.ok);
+}
+
+async function toggleReconhecimento() {
+  const acao = reconhecimentoAtivo ? 'parar' : 'iniciar';
+  const r = await fetch('/api/reconhecimento', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({acao})
+  });
+  const d = await r.json();
+  toast(acao === 'iniciar' ? 'Reconhecimento iniciado' : 'Reconhecimento parado');
+  atualizarStatus();
+}
+
+async function carregarLogs() {
+  const r = await fetch('/api/logs');
+  const logs = await r.json();
+  const tb = document.getElementById('tabela-logs');
+  if (!logs.length) { tb.innerHTML = '<tr><td colspan="4" class="muted">Nenhum log ainda.</td></tr>'; return; }
+  tb.innerHTML = logs.map(l => `
+    <tr>
+      <td>${l.timestamp}</td>
+      <td><span class="badge ${l.tipo}">${l.tipo}</span></td>
+      <td>${l.pessoa}</td>
+      <td class="muted">${l.detalhe || '-'}</td>
+    </tr>`).join('');
+}
+
+async function limparLogs() {
+  if (!confirm('Limpar todos os logs?')) return;
+  await fetch('/api/limpar_logs', { method: 'POST' });
+  carregarLogs();
+  toast('Logs limpos');
+}
+
+let streamTimer = null;
+function carregarStream() {
+  const box = document.getElementById('stream-box');
+  box.innerHTML = '<img id="cam-frame" style="width:100%;display:block" '
+    + 'onerror="this.parentElement.innerHTML=\'<div class=muted>Câmera indisponível.</div>\'">';
+  const img = document.getElementById('cam-frame');
+  const tick = () => { img.src = '/camera_frame.jpg?t=' + Date.now(); };
+  tick();
+  streamTimer = setInterval(tick, 1000);
+  streamAtivo = true;
+}
+function pararStream() {
+  if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
+  document.getElementById('stream-box').innerHTML = '<div class="muted">Visualização parada.</div>';
+  streamAtivo = false;
+}
+
+atualizarStatus();
+carregarLogs();
+setInterval(atualizarStatus, 5000);
+setInterval(() => { if (document.getElementById('logs').classList.contains('active')) carregarLogs(); }, 8000);
+</script>
+</body>
+</html>
